@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from langgraph.graph import StateGraph, END
+try:
+    from langgraph.graph import StateGraph, END
+except Exception:  # pragma: no cover - fallback for Windows DLL/import issues
+    StateGraph = None
+    END = "__end__"
 
 from .agents import AnalysisAgent, OptimizationAgent, EvaluationResearchAgent
 from .models import OptimizationState, ProjectConfig
@@ -9,6 +13,7 @@ from .tools import benchmark_candidates
 analysis_agent = AnalysisAgent()
 optimization_agent = OptimizationAgent()
 evaluation_agent = EvaluationResearchAgent()
+
 
 def build_graph(project: ProjectConfig):
     def analyze(state: OptimizationState):
@@ -39,6 +44,18 @@ def build_graph(project: ProjectConfig):
             "diagnosis": diagnosis,
             "continue_loop": continue_loop and state.get("iteration", 0) < project.max_iterations,
         }
+
+    if StateGraph is None:
+        class SimpleGraph:
+            def invoke(self, initial_state: dict):
+                state = dict(initial_state)
+                state.update(analyze(state))
+                state.update(optimize(state))
+                state.update(benchmark(state))
+                state.update(evaluate(state))
+                return state
+
+        return SimpleGraph()
 
     graph = StateGraph(OptimizationState)
     graph.add_node("analysis", analyze)
