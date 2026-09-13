@@ -1,50 +1,50 @@
 # LLMOpt-Agent
 
-LLMOpt-Agent is an agentic optimization workflow for LLM inference tuning. It evaluates different model precision settings, KV-cache precision, and batch-size combinations, then recommends the best configuration for a workload under latency and quality constraints.
+LLMOpt-Agent is a prototype optimization workflow for LLM inference tuning. It evaluates model precision, KV-cache precision, and batch-size configurations, then recommends the best-performing setup for a given workload under latency and quality constraints.
 
-This project is a V1 prototype designed to make inference optimization testable, debuggable, and easy to extend. The current benchmark layer is a deterministic simulator, not a real GPU benchmark, which keeps the system lightweight and portable while still demonstrating the optimization loop.
+This project is designed to make inference optimization systematic, testable, and easy to extend. The current benchmark layer is intentionally a deterministic simulator rather than a real GPU benchmark, which keeps the system lightweight, portable, and easy to reason about while demonstrating the end-to-end optimization loop.
 
 ## Why this project exists
 
 Serving large language models efficiently requires balancing several tradeoffs:
 
-- latency vs throughput
-- memory usage vs quality
-- batch size vs response time
-- lower precision vs model fidelity
+- latency vs. throughput
+- memory usage vs. model quality
+- batch size vs. response time
+- lower precision vs. model fidelity
 
 This project automates that search process by:
 
 - analyzing the workload and hardware profile
 - generating candidate configurations
-- simulating benchmark outcomes
-- checking constraints
-- selecting the best valid configuration
+- simulating expected benchmark outcomes
+- checking constraint satisfaction
+- selecting the most promising valid configuration
 
 ## What it does
 
-The workflow includes:
+The workflow includes four main stages:
 
-1. Analysis agent
+1. Analysis stage
    - identifies workload type
    - checks concurrency pressure
    - estimates memory characteristics
 
-2. Optimization agent
-   - generates candidate inference configurations
-   - explores precision, KV-cache, and batch-size combinations
+2. Optimization stage
+   - generates candidates for precision, KV-cache precision, and batch size
+   - prioritizes settings with strong efficiency potential
 
-3. Benchmark simulator
-   - calculates TTFT, TPOT, throughput, VRAM, quality score, and GPU utilization
-   - evaluates whether constraints are satisfied
+3. Benchmark simulation
+   - estimates TTFT, TPOT, throughput, VRAM, quality score, and GPU utilization
+   - evaluates whether the configuration satisfies latency and quality constraints
 
-4. Evaluation agent
-   - picks the best valid candidate
-   - decides whether the search should continue
+4. Evaluation stage
+   - selects the best valid candidate
+   - decides whether additional search is needed
 
 ## Example workflow
 
-The project reads a JSON config such as:
+The project reads a JSON config such as the following:
 
 ```json
 {
@@ -71,9 +71,81 @@ The project reads a JSON config such as:
 }
 ```
 
-Then it runs the optimization loop and prints a recommendation.
+The project then evaluates multiple combinations and prints the best valid recommendation.
 
-## Run it locally
+## Architecture overview
+
+```mermaid
+flowchart TD
+    A[Config Input] --> B[Project Validation]
+    B --> C[Analysis Agent]
+    C --> D[Optimization Agent]
+    D --> E[Candidate Generation]
+    E --> F[Benchmark Simulator]
+    F --> G[Constraint Evaluation]
+    G --> H[Best Configuration Recommendation]
+    H --> I[Report + Diagnosis]
+```
+
+This architecture is intentionally simple and modular, making it easy to upgrade the benchmark backend or connect to a real inference engine later.
+
+## Optimization loop in plain English
+
+```mermaid
+flowchart LR
+    A[Workload + Hardware Profile] --> B[Analyze workload pressure]
+    B --> C[Generate tuning candidates]
+    C --> D[Simulate latency, quality, memory]
+    D --> E[Check constraints]
+    E --> F{Valid candidate found?}
+    F -- Yes --> G[Recommend best config]
+    F -- No --> C
+```
+
+This loop captures the central idea of the project: search across a constrained space, evaluate tradeoffs, and recommend a configuration that balances performance and quality.
+
+## Key Features
+
+- workload-aware analysis of LLM inference demand
+- candidate generation across precision, KV-cache, and batch-size settings
+- deterministic benchmark simulation for latency, throughput, memory, and quality
+- constraint validation for TTFT and quality targets
+- modular optimization workflow with easy extension points
+- clean Python project structure for experimentation and future backend upgrades
+
+## Tech Stack
+
+- Python 3
+- Pydantic for validation and data modeling
+- LangGraph-style workflow orchestration pattern
+- deterministic benchmark simulation
+- pytest for test coverage
+- JSON-based configuration-driven design
+
+## Why this project matters
+
+LLM deployment is not only about model quality; it is also about making the right tradeoff decisions under real operational constraints. This project focuses on one of the most important problems in modern inference systems: how to choose the right serving configuration when balancing latency, throughput, memory usage, and model quality.
+
+For teams operating large language models in production, these tradeoffs are expensive to tune manually. LLMOpt-Agent explores that decision space in a structured way and provides a practical foundation for more advanced optimization systems that can later integrate with real benchmark backends, hardware telemetry, and serving platforms.
+
+## Project Status / Future Roadmap
+
+### Current status
+
+- V1 prototype completed
+- deterministic simulator implemented
+- end-to-end optimization workflow validated
+- modular architecture established for future extension
+
+### Planned roadmap
+
+- integrate real inference backends and hardware-level measurements
+- add more optimization strategies and search heuristics
+- support adaptive iteration and policy-guided tuning
+- expose results through a dashboard or API layer
+- connect with real serving metrics and production ML infrastructure
+
+## Run locally
 
 ### Windows PowerShell
 
@@ -95,13 +167,7 @@ python -m app.main --config configs/example.json
 
 ## Example output
 
-I verified this locally with:
-
-```bash
-python -m app.main --config configs/example.json
-```
-
-and it successfully produced:
+The project produces a report in the following format:
 
 ```text
 === LLMOpt-Agent Report ===
@@ -127,10 +193,34 @@ Measured/simulated metrics:
   passed_constraints: True
 ```
 
+## What the project optimizes
+
+```mermaid
+mindmap
+  root((LLM Serving Optimization))
+    Latency
+      TTFT
+      TPOT
+    Throughput
+      batch size
+      concurrency
+    Memory
+      VRAM
+      KV-cache precision
+    Quality
+      precision choice
+      fidelity tradeoff
+    Cost
+      GPU utilization
+      resource efficiency
+```
+
+This chart reflects the central idea behind the project: identify the best configuration that meets service constraints while improving efficiency.
+
 ## Project structure
 
 ```text
-llmopt_agent/
+llmopt-agent-main/
 ├── app/
 │   ├── agents.py
 │   ├── benchmark.py
@@ -147,41 +237,52 @@ llmopt_agent/
 ├── README.md
 ├── PUBLISHING.md
 ├── proof-output.txt
-└── .env.example
+├── .env.example
+└── .gitignore
 ```
+
+## Current status
+
+This project is a V1 prototype and should be viewed as a research and learning project focused on:
+
+- LLM inference optimization
+- workload-aware tuning
+- benchmark simulation
+- automated configuration search
+- agentic decision-making for model deployment tradeoffs
+
+It is not yet a real hardware benchmark suite or a production-scale serving system. The benchmark layer intentionally uses deterministic estimates rather than live GPU measurements so the architecture can be tested, extended, and improved without requiring expensive hardware in the early stages.
 
 ## Technical notes
 
-This project is intentionally designed to be:
+The project is intentionally designed to be:
 
 - deterministic
 - debuggable
 - easy to test
 - portable
-- upgradeable to real benchmark backends
+- extensible for real benchmark backends
 
-The benchmark backend is intentionally simulated in V1 and is meant to be replaced later with real measurements from:
+The simulator is meant to be replaced later with real measurements from:
 
 - vLLM
 - PyTorch
 - ROCm/HIP
-- FP16/BF16/FP8/INT8
+- FP16 / BF16 / FP8 / INT8
 - KV-cache tuning
 - continuous batching
-- TTFT and TPOT evaluation
-
-## Limitations
-
-This is not yet a real GPU benchmarking platform. The numbers are estimates produced by a simulator and should not be interpreted as real hardware benchmarks.
+- TTFT and TPOT benchmarking
 
 ## Roadmap
 
-- integrate real inference backend measurements
-- add richer search strategies
-- support adaptive optimization loops
-- expose results as a dashboard or API
-- connect to real serving metrics
+Planned improvements include:
+
+- real inference backend integration
+- richer search strategies
+- adaptive optimization loops
+- dashboard or API-based reporting
+- integration with actual serving metrics and hardware telemetry
 
 ## License
 
-This project is provided as an educational and research prototype for LLM inference optimization.
+This project is provided as an educational and research prototype for LLM inference optimization and workload-aware tuning.
